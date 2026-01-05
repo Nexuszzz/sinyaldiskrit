@@ -25,25 +25,44 @@ export function SignalPlot({
     if (secondSignal && secondSignal.length > 0 && outputSamples.length > 0) {
         const allTraces: any[] = [];
         
+        // Filter to only show relevant data with non-zero values or within the n range
+        const x1NonZero = inputSamples.filter(s => s.value !== 0);
+        const x2NonZero = secondSignal.filter(s => s.value !== 0);
+        const yNonZero = outputSamples.filter(s => s.value !== 0);
+        
+        // Determine display range from all signals
+        const allNValues = [
+            ...x1NonZero.map(s => s.n),
+            ...x2NonZero.map(s => s.n),
+            ...yNonZero.map(s => s.n),
+        ];
+        const displayMin = allNValues.length > 0 ? Math.min(...allNValues) - 1 : -5;
+        const displayMax = allNValues.length > 0 ? Math.max(...allNValues) + 1 : 5;
+        
+        // Filter samples to display range
+        const displayInput = inputSamples.filter(s => s.n >= displayMin && s.n <= displayMax);
+        const displaySecond = secondSignal.filter(s => s.n >= displayMin && s.n <= displayMax);
+        const displayOutput = outputSamples.filter(s => s.n >= displayMin && s.n <= displayMax);
+        
         // Subplot 1: First signal x₁(n)
         allTraces.push({
-            x: inputSamples.map(s => s.n),
-            y: inputSamples.map(s => s.value),
+            x: displayInput.map(s => s.n),
+            y: displayInput.map(s => s.value),
             mode: 'markers',
             type: 'scatter',
             name: 'x₁(n)',
-            marker: { color: '#3b82f6', size: 10, symbol: 'circle' },
+            marker: { color: '#3b82f6', size: 12, symbol: 'circle' },
             hovertemplate: `x₁(n)<br>n: %{x}<br>value: %{y:.3f}<extra></extra>`,
             xaxis: 'x',
             yaxis: 'y',
         });
-        inputSamples.forEach(s => {
+        displayInput.forEach(s => {
             allTraces.push({
                 x: [s.n, s.n],
                 y: [0, s.value],
                 mode: 'lines',
                 type: 'scatter',
-                line: { color: '#3b82f6', width: 2 },
+                line: { color: '#3b82f6', width: 3 },
                 showlegend: false,
                 hoverinfo: 'skip',
                 xaxis: 'x',
@@ -53,23 +72,23 @@ export function SignalPlot({
         
         // Subplot 2: Second signal x₂(n)
         allTraces.push({
-            x: secondSignal.map(s => s.n),
-            y: secondSignal.map(s => s.value),
+            x: displaySecond.map(s => s.n),
+            y: displaySecond.map(s => s.value),
             mode: 'markers',
             type: 'scatter',
             name: 'x₂(n)',
-            marker: { color: '#22c55e', size: 10, symbol: 'diamond' },
+            marker: { color: '#22c55e', size: 12, symbol: 'diamond' },
             hovertemplate: `x₂(n)<br>n: %{x}<br>value: %{y:.3f}<extra></extra>`,
             xaxis: 'x2',
             yaxis: 'y2',
         });
-        secondSignal.forEach(s => {
+        displaySecond.forEach(s => {
             allTraces.push({
                 x: [s.n, s.n],
                 y: [0, s.value],
                 mode: 'lines',
                 type: 'scatter',
-                line: { color: '#22c55e', width: 2 },
+                line: { color: '#22c55e', width: 3 },
                 showlegend: false,
                 hoverinfo: 'skip',
                 xaxis: 'x2',
@@ -79,23 +98,23 @@ export function SignalPlot({
         
         // Subplot 3: Output signal y(n)
         allTraces.push({
-            x: outputSamples.map(s => s.n),
-            y: outputSamples.map(s => s.value),
+            x: displayOutput.map(s => s.n),
+            y: displayOutput.map(s => s.value),
             mode: 'markers',
             type: 'scatter',
             name: 'y(n)',
-            marker: { color: '#f97316', size: 10, symbol: 'square' },
+            marker: { color: '#f97316', size: 12, symbol: 'square' },
             hovertemplate: `y(n)<br>n: %{x}<br>value: %{y:.3f}<extra></extra>`,
             xaxis: 'x3',
             yaxis: 'y3',
         });
-        outputSamples.forEach(s => {
+        displayOutput.forEach(s => {
             allTraces.push({
                 x: [s.n, s.n],
                 y: [0, s.value],
                 mode: 'lines',
                 type: 'scatter',
-                line: { color: '#f97316', width: 2 },
+                line: { color: '#f97316', width: 3 },
                 showlegend: false,
                 hoverinfo: 'skip',
                 xaxis: 'x3',
@@ -103,76 +122,95 @@ export function SignalPlot({
             });
         });
         
+        // Calculate max y value for proper scaling
+        const allYValues = [
+            ...displayInput.map(s => Math.abs(s.value)),
+            ...displaySecond.map(s => Math.abs(s.value)),
+            ...displayOutput.map(s => Math.abs(s.value)),
+        ];
+        const maxY = Math.max(...allYValues, 1) * 1.2;
+        
         return (
             <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
                 <Plot
                     data={allTraces}
                     layout={{
-                        title: { text: 'Arithmetic Signal Operation', font: { color: '#f1f5f9', size: 16 } },
+                        title: { text: 'Operasi Aritmatika Signal', font: { color: '#f1f5f9', size: 18 } },
                         grid: { rows: 3, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
                         xaxis: {
-                            title: 'n',
+                            title: { text: 'n', font: { size: 12 } },
                             gridcolor: '#334155',
                             zerolinecolor: '#64748b',
+                            zerolinewidth: 2,
                             color: '#cbd5e1',
                             dtick: 1,
                             domain: [0, 1],
+                            range: [displayMin - 0.5, displayMax + 0.5],
                         },
                         yaxis: {
-                            title: 'x₁(n)',
+                            title: { text: 'x₁(n)', font: { size: 14, color: '#3b82f6' } },
                             gridcolor: '#334155',
                             zerolinecolor: '#64748b',
+                            zerolinewidth: 2,
                             color: '#cbd5e1',
-                            domain: [0.7, 1],
+                            domain: [0.72, 1],
+                            range: [-maxY, maxY],
                         },
                         xaxis2: {
-                            title: 'n',
+                            title: { text: 'n', font: { size: 12 } },
                             gridcolor: '#334155',
                             zerolinecolor: '#64748b',
+                            zerolinewidth: 2,
                             color: '#cbd5e1',
                             dtick: 1,
                             domain: [0, 1],
                             anchor: 'y2',
+                            range: [displayMin - 0.5, displayMax + 0.5],
                         },
                         yaxis2: {
-                            title: 'x₂(n)',
+                            title: { text: 'x₂(n)', font: { size: 14, color: '#22c55e' } },
                             gridcolor: '#334155',
                             zerolinecolor: '#64748b',
+                            zerolinewidth: 2,
                             color: '#cbd5e1',
-                            domain: [0.37, 0.63],
+                            domain: [0.38, 0.66],
                             anchor: 'x2',
+                            range: [-maxY, maxY],
                         },
                         xaxis3: {
-                            title: 'n',
+                            title: { text: 'n', font: { size: 12 } },
                             gridcolor: '#334155',
                             zerolinecolor: '#64748b',
+                            zerolinewidth: 2,
                             color: '#cbd5e1',
                             dtick: 1,
                             domain: [0, 1],
                             anchor: 'y3',
+                            range: [displayMin - 0.5, displayMax + 0.5],
                         },
                         yaxis3: {
-                            title: 'y(n)',
+                            title: { text: 'y(n)', font: { size: 14, color: '#f97316' } },
                             gridcolor: '#334155',
                             zerolinecolor: '#64748b',
+                            zerolinewidth: 2,
                             color: '#cbd5e1',
-                            domain: [0, 0.26],
+                            domain: [0, 0.28],
                             anchor: 'x3',
                         },
                         plot_bgcolor: '#1e293b',
                         paper_bgcolor: '#1e293b',
                         font: { family: 'Inter, sans-serif' },
-                        legend: { font: { color: '#cbd5e1' }, bgcolor: 'rgba(30, 41, 59, 0.8)', x: 1, y: 1 },
-                        margin: { l: 60, r: 40, t: 60, b: 60 },
+                        legend: { font: { color: '#cbd5e1', size: 12 }, bgcolor: 'rgba(30, 41, 59, 0.9)', x: 1.02, y: 1, bordercolor: '#475569', borderwidth: 1 },
+                        margin: { l: 70, r: 100, t: 60, b: 50 },
                         hovermode: 'closest',
                         annotations: [
-                            { text: 'Signal Pertama x₁(n)', x: 0.5, y: 1.02, xref: 'paper', yref: 'paper', showarrow: false, font: { color: '#3b82f6', size: 12 } },
-                            { text: 'Signal Kedua x₂(n)', x: 0.5, y: 0.65, xref: 'paper', yref: 'paper', showarrow: false, font: { color: '#22c55e', size: 12 } },
-                            { text: 'Hasil y(n)', x: 0.5, y: 0.28, xref: 'paper', yref: 'paper', showarrow: false, font: { color: '#f97316', size: 12 } },
+                            { text: '📊 Signal Pertama', x: 0.02, y: 0.98, xref: 'paper', yref: 'paper', showarrow: false, font: { color: '#3b82f6', size: 13 }, xanchor: 'left' },
+                            { text: '📊 Signal Kedua', x: 0.02, y: 0.64, xref: 'paper', yref: 'paper', showarrow: false, font: { color: '#22c55e', size: 13 }, xanchor: 'left' },
+                            { text: '📈 Hasil Operasi', x: 0.02, y: 0.26, xref: 'paper', yref: 'paper', showarrow: false, font: { color: '#f97316', size: 13 }, xanchor: 'left' },
                         ],
                     }}
-                    config={{ displayModeBar: true, displaylogo: false, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
-                    style={{ width: '100%', height: '700px' }}
+                    config={{ displayModeBar: true, displaylogo: false, responsive: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
+                    style={{ width: '100%', height: '750px' }}
                 />
             </div>
         );

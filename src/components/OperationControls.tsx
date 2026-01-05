@@ -68,34 +68,41 @@ export function OperationControls({
 
             {/* Arithmetic Operation Sub-selector */}
             {operation.type === 'arithmetic' && (
-                <div className="space-y-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
-                    <label className="text-sm font-semibold text-green-400">
+                <div className="space-y-4 p-4 bg-gradient-to-br from-green-900/30 to-emerald-900/20 rounded-xl border-2 border-green-600/50">
+                    <label className="text-base font-bold text-green-400 flex items-center gap-2">
+                        <span className="text-xl">🔢</span>
                         Pilih Operasi Aritmatika:
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                         {([
-                            { value: 'add', label: '➕ Penjumlahan', desc: 'x₁(n) + x₂(n)' },
-                            { value: 'subtract', label: '➖ Pengurangan', desc: 'x₁(n) - x₂(n)' },
-                            { value: 'multiply', label: '✖️ Perkalian', desc: 'x₁(n) × x₂(n)' },
-                            { value: 'convolve', label: '⊛ Konvolusi', desc: 'x₁(n) * x₂(n)' },
+                            { value: 'add', label: '➕ Penjumlahan', desc: 'y(n) = x₁(n) + x₂(n)' },
+                            { value: 'subtract', label: '➖ Pengurangan', desc: 'y(n) = x₁(n) − x₂(n)' },
+                            { value: 'multiply', label: '✖️ Perkalian', desc: 'y(n) = x₁(n) × x₂(n)' },
+                            { value: 'convolve', label: '⊛ Konvolusi', desc: 'y(n) = Σ x₁(k)×x₂(n−k)' },
                         ] as const).map(({ value, label, desc }) => (
                             <button
                                 key={value}
                                 onClick={() => handleArithmeticOpChange(value)}
-                                className={`px-3 py-2 rounded-lg text-xs transition-all text-left ${
+                                className={`px-4 py-3 rounded-lg text-sm transition-all text-left border ${
                                     operation.parameters.arithmeticOp === value
-                                        ? 'bg-green-600 text-white'
-                                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                        ? 'bg-green-600 text-white border-green-400 shadow-lg shadow-green-500/30'
+                                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-600'
                                 }`}
                             >
-                                <div className="font-medium">{label}</div>
-                                <div className="text-[10px] opacity-70 font-mono">{desc}</div>
+                                <div className="font-semibold">{label}</div>
+                                <div className="text-xs opacity-80 font-mono mt-1">{desc}</div>
                             </button>
                         ))}
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                        💡 Signal kedua akan diinput setelah memilih operasi. Gunakan mode "Custom" untuk menambahkan signal kedua.
-                    </p>
+                    <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                        <p className="text-sm text-slate-300 flex items-start gap-2">
+                            <span className="text-yellow-500">💡</span>
+                            <span>
+                                <strong>Instruksi:</strong> Setelah memilih operasi, scroll ke bawah untuk input <span className="text-green-400 font-semibold">Signal Kedua x₂(n)</span>. 
+                                Gunakan preset atau input manual.
+                            </span>
+                        </p>
+                    </div>
                 </div>
             )}
 

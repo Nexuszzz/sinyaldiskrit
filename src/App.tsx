@@ -37,14 +37,25 @@ function App() {
     const [hasSimulated, setHasSimulated] = useState(false);
     const [decompositionResult, setDecompositionResult] = useState<DecompositionResult | null>(null);
     const [arithmeticResult, setArithmeticResult] = useState<ArithmeticCalculation[] | null>(null);
+    const [displaySecondSignal, setDisplaySecondSignal] = useState<SignalValue[]>([]);
 
     // Check if ready to simulate based on input mode and operation type
     const canSimulate = () => {
         const hasSignal1 = inputMode === 'expression' ? isValidExpression : customSamples.length > 0;
         if (operation.type === 'arithmetic') {
-            return hasSignal1 && secondSignal.length > 0 && operation.parameters.arithmeticOp;
+            // For arithmetic, need both signals and an operation selected
+            const hasSignal2 = secondSignal.some(s => s.value !== 0); // At least one non-zero value
+            return hasSignal1 && hasSignal2 && !!operation.parameters.arithmeticOp;
         }
         return hasSignal1;
+    };
+
+    // Get simulation status message for arithmetic
+    const getArithmeticStatus = () => {
+        if (!operation.parameters.arithmeticOp) return { ready: false, message: 'Pilih jenis operasi aritmatika' };
+        const hasSignal2 = secondSignal.some(s => s.value !== 0);
+        if (!hasSignal2) return { ready: false, message: 'Tambahkan signal kedua x₂(n)' };
+        return { ready: true, message: 'Siap simulate!' };
     };
 
     const handleSimulate = () => {
@@ -150,21 +161,56 @@ function App() {
 
             // Handle arithmetic operations
             if (operation.type === 'arithmetic' && operation.parameters.arithmeticOp) {
-                // Extend second signal with zeros
+                // Determine proper range for arithmetic operations
+                const x1NonZero = samples.filter(s => s.value !== 0);
+                const x2NonZero = secondSignal.filter(s => s.value !== 0);
+                
+                let arithmeticMin = nMin;
+                let arithmeticMax = nMax;
+                
+                if (operation.parameters.arithmeticOp === 'convolve') {
+                    // For convolution, output range is x1_min + x2_min to x1_max + x2_max
+                    if (x1NonZero.length > 0 && x2NonZero.length > 0) {
+                        const x1Min = Math.min(...x1NonZero.map(s => s.n));
+                        const x1Max = Math.max(...x1NonZero.map(s => s.n));
+                        const x2Min = Math.min(...x2NonZero.map(s => s.n));
+                        const x2Max = Math.max(...x2NonZero.map(s => s.n));
+                        arithmeticMin = Math.min(nMin, x1Min + x2Min);
+                        arithmeticMax = Math.max(nMax, x1Max + x2Max);
+                    }
+                } else {
+                    // For point-wise operations, use union of both signal ranges
+                    if (x1NonZero.length > 0) {
+                        arithmeticMin = Math.min(arithmeticMin, Math.min(...x1NonZero.map(s => s.n)));
+                        arithmeticMax = Math.max(arithmeticMax, Math.max(...x1NonZero.map(s => s.n)));
+                    }
+                    if (x2NonZero.length > 0) {
+                        arithmeticMin = Math.min(arithmeticMin, Math.min(...x2NonZero.map(s => s.n)));
+                        arithmeticMax = Math.max(arithmeticMax, Math.max(...x2NonZero.map(s => s.n)));
+                    }
+                }
+                
+                // Extend both signals to cover the full range
+                const extendedFirst: SignalValue[] = [];
                 const extendedSecond: SignalValue[] = [];
-                for (let n = displayMin; n <= displayMax; n++) {
-                    const existing = secondSignal.find(s => s.n === n);
-                    extendedSecond.push({ n, value: existing?.value || 0 });
+                for (let n = arithmeticMin; n <= arithmeticMax; n++) {
+                    const existing1 = samples.find(s => s.n === n);
+                    const existing2 = secondSignal.find(s => s.n === n);
+                    extendedFirst.push({ n, value: existing1?.value || 0 });
+                    extendedSecond.push({ n, value: existing2?.value || 0 });
                 }
                 
                 const { output, calculations } = applyArithmeticOperation(
-                    samples,
+                    extendedFirst,
                     extendedSecond,
                     operation.parameters.arithmeticOp,
-                    nMin,
-                    nMax
+                    arithmeticMin,
+                    arithmeticMax
                 );
                 
+                // Update display samples
+                setInputSamples(extendedFirst);
+                setDisplaySecondSignal(extendedSecond);
                 setOutputSamples(output);
                 setArithmeticResult(calculations);
                 setDecompositionResult(null);
@@ -338,16 +384,32 @@ function App() {
 
                             {/* Second Signal Input for Arithmetic Operations */}
                             {operation.type === 'arithmetic' && (
-                                <SecondSignalInput
-                                    samples={secondSignal}
-                                    onChange={setSecondSignal}
-                                />
+                                <>
+                                    <SecondSignalInput
+                                        samples={secondSignal}
+                                        onChange={setSecondSignal}
+                                    />
+                                    {/* Arithmetic Status Indicator */}
+                                    {(() => {
+                                        const status = getArithmeticStatus();
+                                        return (
+                                            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+                                                status.ready 
+                                                    ? 'bg-green-900/30 border border-green-600/50 text-green-400' 
+                                                    : 'bg-yellow-900/30 border border-yellow-600/50 text-yellow-400'
+                                            }`}>
+                                                <span>{status.ready ? '✅' : '⚠️'}</span>
+                                                <span>{status.message}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </>
                             )}
 
                             <button
                                 onClick={handleSimulate}
                                 disabled={!canSimulate()}
-                                className={`w-full py-3 rounded-lg font-semibold text-lg shadow-lg transition-all
+                                className={`w-full py-4 rounded-lg font-semibold text-lg shadow-lg transition-all
                   ${canSimulate()
                                         ? 'bg-gradient-to-r from-blue-600 to-orange-600 hover:from-blue-500 hover:to-orange-500 shadow-blue-500/30'
                                         : 'bg-slate-700 text-slate-500 cursor-not-allowed'
@@ -379,7 +441,7 @@ function App() {
                                     outputSamples={outputSamples}
                                     showBoth={operation.type !== 'none' && operation.type !== 'decompose'}
                                     decompositionResult={decompositionResult}
-                                    secondSignal={operation.type === 'arithmetic' ? secondSignal : undefined}
+                                    secondSignal={operation.type === 'arithmetic' ? displaySecondSignal : undefined}
                                 />
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
